@@ -20,7 +20,7 @@ export class PrismaHelpRequestRepository implements HelpRequestRepository {
   }
 
   async byId(id: HelpRequestId): Promise<HelpRequest | null> {
-    const row = await prisma.helpRequest.findUnique({
+    const row = await prisma.helpRequest.findFirst({
       where: { id: id.value },
     });
     return row ? HelpRequestMapper.toDomain(row) : null;

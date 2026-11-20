@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum RequestStatus {
+  OPEN
+  ACCEPTED
+  COMPLETED
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  password         String
+  name             String
+  role             Role            @default(STUDENT)
+  speciality       String          @default("Informatique")
+  level            String          @default("Licence 3")
+  skills           String          @default("Algorithmique, Programmation Web")
+  bio              String?
+  reputationPoints Int             @default(0)
+  badges           String          @default("Membre Campus")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  requests         HelpRequest[]   @relation("AuthorRequests")
+  assignedSessions HelpRequest[]   @relation("AssignedHelperRequests")
+  proposals        Proposal[]
+  reviewsGiven     SessionReview[] @relation("ReviewsGiven")
+  reviewsReceived  SessionReview[] @relation("ReviewsReceived")
+  reportsSubmitted Report[]        @relation("ReportsSubmitted")
+}
+
+model HelpRequest {
+  id               String          @id @default(uuid())
+  title            String
+  description      String
+  subject          String
+  level            String
+  availability     String
+  status           RequestStatus   @default(OPEN)
+  isReported       Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  authorId         String
+  author           User            @relation("AuthorRequests", fields: [authorId], references: [id], onDelete: Cascade)
+
+  selectedHelperId String?
+  selectedHelper   User?           @relation("AssignedHelperRequests", fields: [selectedHelperId], references: [id], onDelete: SetNull)
+
+  proposals        Proposal[]
+  reviews          SessionReview[]
+  reports          Report[]
+}
+
+model Proposal {
+  id                   String         @id @default(uuid())
+  message              String
+  proposedAvailability String?
+  status               ProposalStatus @default(PENDING)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  requestId            String
+  request              HelpRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  helperId             String
+  helper               User           @relation(fields: [helperId], references: [id], onDelete: Cascade)
+}
+
+model SessionReview {
+  id          String      @id @default(uuid())
+  rating      Int
+  comment     String
+  createdAt   DateTime    @default(now())
+
+  requestId   String
+  request     HelpRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  reviewerId  String
+  reviewer    User        @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  revieweeId  String
+  reviewee    User        @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  reason      String
+  details     String?
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  resolvedAt  DateTime?
+
+  requestId   String
+  request     HelpRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  reporterId  String
+  reporter    User         @relation("ReportsSubmitted", fields: [reporterId], references: [id], onDelete: Cascade)
+}
